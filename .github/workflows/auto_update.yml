@@ -14,30 +14,21 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Sync All Data
+      - name: Fetch Feeds
         shell: bash
         run: |
-          # Create folder and set UA
           mkdir -p public
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          
-          # GHANA NEWS
           curl -sL -A "$UA" "https://www.ghanaweb.com/rss/home.php" -o public/gh_ghanaweb.xml
           curl -sL -A "$UA" "https://www.graphic.com.gh/rss.xml" -o public/gh_graphic.xml
           curl -sL -A "$UA" "https://www.pulse.com.gh/feeds/news" -o public/gh_pulse.xml
           curl -sL -A "$UA" "https://citinewsroom.com/feed/" -o public/gh_citi.xml
           curl -sL -A "$UA" "https://www.myjoyonline.com/feed/" -o public/gh_joy.xml
-
-          # GHANA FOOTBALL
           curl -sL -A "$UA" "https://ghanasoccernet.com/feed" -o public/gh_footy.xml
           curl -sL -A "$UA" "https://www.myjoyonline.com/sports/feed/" -o public/gh_joy_sports.xml
           curl -sL -A "$UA" "https://www.modernghana.com/sports/rss.xml" -o public/gh_modern_sports.xml
           curl -sL -A "$UA" "https://footballmadeinghana.com/feed/" -o public/gh_fm_football.xml
-
-          # INTERNATIONAL LEAGUES
           curl -sL -A "$UA" "https://www.skysports.com/rss/12040" -o public/intl_skyfootball.xml
           curl -sL -A "$UA" "https://www.fifa.com/rss/index.xml" -o public/intl_fifa.xml
           curl -sL -A "$UA" "https://www.espn.com/espn/rss/soccer/news" -o public/intl_espn.xml
@@ -51,8 +42,6 @@ jobs:
           curl -sL -A "$UA" "https://www.uefa.com/rssfeed/uefaeuropaleague/" -o public/intl_uefaeuropa.xml
           curl -sL -A "$UA" "https://www.mlssoccer.com/rss" -o public/intl_mls.xml
           curl -sL -A "$UA" "https://www.cbf.com.br/rss" -o public/intl_brasileirao.xml
-
-          # OTHER SPORTS & INT NEWS
           curl -sL -A "$UA" "https://www.skysports.com/rss/12433" -o public/sports_f1.xml
           curl -sL -A "$UA" "https://www.skysports.com/rss/12110" -o public/sports_tennis.xml
           curl -sL -A "$UA" "https://www.espn.com/espn/rss/nba/news" -o public/sports_basketball.xml
@@ -60,56 +49,49 @@ jobs:
           curl -sL -A "$UA" "http://feeds.bbci.co.uk/news/world/rss.xml" -o public/intl_bbc.xml
           curl -sL -A "$UA" "https://www.aljazeera.com/xml/rss/all.xml" -o public/intl_aljazeera.xml
 
-      - name: Python Processing
+      - name: Process
         shell: bash
         run: |
-          python3 - <<'PYTHON_EOF'
+          python3 - <<'EOF'
           import xml.etree.ElementTree as ET
           import os
           from datetime import datetime, timedelta, timezone
           from email.utils import parsedate_to_datetime
-
-          RET_HRS = 24
-
-          def parse(p):
-              if not os.path.exists(p) or os.path.getsize(p) < 300: return []
-              try: return ET.parse(p).getroot().findall('.//item')
+          def parse_rss(path):
+              if not os.path.exists(path) or os.path.getsize(path) < 300: return []
+              try: return ET.parse(path).getroot().findall('.//item')
               except: return []
-
-          def recent(i):
-              pb = i.find('pubDate')
+          def is_recent(item):
+              pb = item.find('pubDate')
               if pb is None or not pb.text: return False
               try:
-                  d = parsedate_to_datetime(pb.text)
-                  if d.tzinfo is None: d = d.replace(tzinfo=timezone.utc)
-                  return datetime.now(timezone.utc) - d <= timedelta(hours=RET_HRS)
+                  dt = parsedate_to_datetime(pb.text)
+                  if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
+                  return datetime.now(timezone.utc) - dt <= timedelta(hours=24)
               except: return False
-
-          def merge(srcs, out, title):
+          def merge(files, out, title):
               items = []
-              if os.path.exists(out): items.extend(parse(out))
-              for s in srcs: items.extend(parse(s))
+              if os.path.exists(out): items.extend(parse_rss(out))
+              for f in files: items.extend(parse_rss(f))
               seen, final = set(), []
-              for it in items:
-                  lk = it.find('link')
-                  u = lk.text.strip() if lk is not None and lk.text else None
-                  if u and u not in seen and recent(it):
-                      seen.add(u); final.append(it)
-              root = ET.Element('rss', version='2.0')
-              ch = ET.SubElement(root, 'channel')
-              ET.SubElement(ch, 'title').text = title
-              ET.SubElement(ch, 'lastBuildDate').text = datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT')
-              for f in final: ch.append(f)
-              ET.ElementTree(root).write(out, encoding='utf-8', xml_declaration=True)
-
-          news_files = ["public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml","public/intl_cnn.xml","public/intl_bbc.xml","public/intl_aljazeera.xml"]
-          foot_files = ["public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml","public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml","public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml","public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml","public/intl_mls.xml","public/intl_brasileirao.xml"]
-          other_files = ["public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml"]
-
-          merge(news_files, "public/news.xml", "MegaSync News")
-          merge(foot_files, "public/football.xml", "MegaSync Football")
-          merge(other_files, "public/other_sports.xml", "MegaSync Other")
-          PYTHON_EOF
+              for i in items:
+                  l = i.find('link')
+                  u = l.text.strip() if l is not None and l.text else None
+                  if u and u not in seen and is_recent(i):
+                      seen.add(u); final.append(i)
+              r = ET.Element('rss', version='2.0')
+              c = ET.SubElement(r, 'channel')
+              ET.SubElement(c, 'title').text = title
+              ET.SubElement(c, 'lastBuildDate').text = datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT')
+              for x in final: c.append(x)
+              ET.ElementTree(r).write(out, encoding='utf-8', xml_declaration=True)
+          news = ["public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml","public/intl_cnn.xml","public/intl_bbc.xml","public/intl_aljazeera.xml"]
+          foot = ["public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml","public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml","public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml","public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml","public/intl_mls.xml","public/intl_brasileirao.xml"]
+          misc = ["public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml"]
+          merge(news, "public/news.xml", "MegaSync News")
+          merge(foot, "public/football.xml", "MegaSync Football")
+          merge(misc, "public/other_sports.xml", "MegaSync Other")
+          EOF
 
       - name: Deploy
         run: |
