@@ -17,29 +17,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Sync Feeds
+      - name: Sync All Data
         shell: bash
         run: |
-          # 1. Create directory
+          # Create folder and set UA
           mkdir -p public
-          
-          # 2. Define User Agent
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
-          # --- GHANA NEWS ---
+          # GHANA NEWS
           curl -sL -A "$UA" "https://www.ghanaweb.com/rss/home.php" -o public/gh_ghanaweb.xml
           curl -sL -A "$UA" "https://www.graphic.com.gh/rss.xml" -o public/gh_graphic.xml
           curl -sL -A "$UA" "https://www.pulse.com.gh/feeds/news" -o public/gh_pulse.xml
           curl -sL -A "$UA" "https://citinewsroom.com/feed/" -o public/gh_citi.xml
           curl -sL -A "$UA" "https://www.myjoyonline.com/feed/" -o public/gh_joy.xml
 
-          # --- GHANA FOOTBALL ---
+          # GHANA FOOTBALL
           curl -sL -A "$UA" "https://ghanasoccernet.com/feed" -o public/gh_footy.xml
           curl -sL -A "$UA" "https://www.myjoyonline.com/sports/feed/" -o public/gh_joy_sports.xml
           curl -sL -A "$UA" "https://www.modernghana.com/sports/rss.xml" -o public/gh_modern_sports.xml
           curl -sL -A "$UA" "https://footballmadeinghana.com/feed/" -o public/gh_fm_football.xml
 
-          # --- INTERNATIONAL LEAGUES ---
+          # INTERNATIONAL LEAGUES
           curl -sL -A "$UA" "https://www.skysports.com/rss/12040" -o public/intl_skyfootball.xml
           curl -sL -A "$UA" "https://www.fifa.com/rss/index.xml" -o public/intl_fifa.xml
           curl -sL -A "$UA" "https://www.espn.com/espn/rss/soccer/news" -o public/intl_espn.xml
@@ -54,19 +52,15 @@ jobs:
           curl -sL -A "$UA" "https://www.mlssoccer.com/rss" -o public/intl_mls.xml
           curl -sL -A "$UA" "https://www.cbf.com.br/rss" -o public/intl_brasileirao.xml
 
-          # --- OTHER SPORTS ---
+          # OTHER SPORTS & INT NEWS
           curl -sL -A "$UA" "https://www.skysports.com/rss/12433" -o public/sports_f1.xml
           curl -sL -A "$UA" "https://www.skysports.com/rss/12110" -o public/sports_tennis.xml
           curl -sL -A "$UA" "https://www.espn.com/espn/rss/nba/news" -o public/sports_basketball.xml
-          curl -sL -A "$UA" "https://www.skysports.com/rss/12027" -o public/sports_cricket.xml
-          curl -sL -A "$UA" "https://www.eurosport.com/rss.xml" -o public/sports_mixed.xml
-
-          # --- INTERNATIONAL NEWS ---
           curl -sL -A "$UA" "http://rss.cnn.com/rss/edition.rss" -o public/intl_cnn.xml
           curl -sL -A "$UA" "http://feeds.bbci.co.uk/news/world/rss.xml" -o public/intl_bbc.xml
           curl -sL -A "$UA" "https://www.aljazeera.com/xml/rss/all.xml" -o public/intl_aljazeera.xml
 
-      - name: Process with Python
+      - name: Python Processing
         shell: bash
         run: |
           python3 - <<'PYTHON_EOF'
@@ -75,61 +69,53 @@ jobs:
           from datetime import datetime, timedelta, timezone
           from email.utils import parsedate_to_datetime
 
-          RETENTION_HOURS = 24
+          RET_HRS = 24
 
-          def get_items(path):
-              if not os.path.exists(path) or os.path.getsize(path) < 300:
-                  return []
-              try:
-                  return ET.parse(path).getroot().findall('.//item')
-              except:
-                  return []
+          def parse(p):
+              if not os.path.exists(p) or os.path.getsize(p) < 300: return []
+              try: return ET.parse(p).getroot().findall('.//item')
+              except: return []
 
-          def is_recent(item):
-              pub = item.find('pubDate')
-              if pub is None or not pub.text: return False
+          def recent(i):
+              pb = i.find('pubDate')
+              if pb is None or not pb.text: return False
               try:
-                  dt = parsedate_to_datetime(pub.text)
-                  if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
-                  return datetime.now(timezone.utc) - dt <= timedelta(hours=RETENTION_HOURS)
+                  d = parsedate_to_datetime(pb.text)
+                  if d.tzinfo is None: d = d.replace(tzinfo=timezone.utc)
+                  return datetime.now(timezone.utc) - d <= timedelta(hours=RET_HRS)
               except: return False
 
-          def save_rss(sources, output, title):
-              all_items = []
-              if os.path.exists(output): all_items.extend(get_items(output))
-              for s in sources: all_items.extend(get_items(s))
-              
-              seen = set()
-              filtered = []
-              for item in all_items:
-                  link = item.find('link')
-                  url = link.text.strip() if link is not None and link.text else None
-                  if url and url not in seen and is_recent(item):
-                      seen.add(url)
-                      filtered.append(item)
-
+          def merge(srcs, out, title):
+              items = []
+              if os.path.exists(out): items.extend(parse(out))
+              for s in srcs: items.extend(parse(s))
+              seen, final = set(), []
+              for it in items:
+                  lk = it.find('link')
+                  u = lk.text.strip() if lk is not None and lk.text else None
+                  if u and u not in seen and recent(it):
+                      seen.add(u); final.append(it)
               root = ET.Element('rss', version='2.0')
               ch = ET.SubElement(root, 'channel')
               ET.SubElement(ch, 'title').text = title
               ET.SubElement(ch, 'lastBuildDate').text = datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT')
-              for i in filtered: ch.append(i)
-              ET.ElementTree(root).write(output, encoding='utf-8', xml_declaration=True)
+              for f in final: ch.append(f)
+              ET.ElementTree(root).write(out, encoding='utf-8', xml_declaration=True)
 
-          # Grouping
-          news = ["public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml","public/intl_cnn.xml","public/intl_bbc.xml","public/intl_aljazeera.xml"]
-          foot = ["public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml","public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml","public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml","public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml","public/intl_mls.xml","public/intl_brasileirao.xml"]
-          misc = ["public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml","public/sports_cricket.xml","public/sports_mixed.xml"]
+          news_files = ["public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml","public/intl_cnn.xml","public/intl_bbc.xml","public/intl_aljazeera.xml"]
+          foot_files = ["public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml","public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml","public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml","public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml","public/intl_mls.xml","public/intl_brasileirao.xml"]
+          other_files = ["public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml"]
 
-          save_rss(news, "public/news.xml", "MegaSync News")
-          save_rss(foot, "public/football.xml", "MegaSync Football")
-          save_rss(misc, "public/other_sports.xml", "MegaSync Other Sports")
+          merge(news_files, "public/news.xml", "MegaSync News")
+          merge(foot_files, "public/football.xml", "MegaSync Football")
+          merge(other_files, "public/other_sports.xml", "MegaSync Other")
           PYTHON_EOF
 
-      - name: Commit Changes
+      - name: Deploy
         run: |
           git config --global user.name "SkyBot"
           git config --global user.email "actions@github.com"
           echo "{\"lastUpdated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/status.json
-          git add public/*.xml public/status.json
-          git commit -m "🌪️ Sync: $(date -u +%H:%M) UTC" || echo "No changes"
+          git add public/
+          git commit -m "🌪️ Sync: $(date -u +%H:%M) UTC" || exit 0
           git push
