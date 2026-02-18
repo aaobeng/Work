@@ -15,6 +15,7 @@ jobs:
       - name: Fetch and Merge
         shell: bash
         run: |
+          set -x
           mkdir -p public
           # Updated User Agent to look like a modern Chrome browser
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
@@ -59,9 +60,8 @@ jobs:
             IFS="|" read -r cat url <<< "$entry"
             echo "Fetching: $url"
             # Use a temporary file to prevent grep from hanging on empty pipes
-            # We add || true to prevent exit code 92 from stopping the script
             curl -sL -A "$UA" --max-time 20 --connect-timeout 15 "$url" -o temp_feed.xml || true
-            if [ -f temp_feed.xml ] && [ $(stat -c%s temp_feed.xml) -gt 500 ]; then
+            if [ -f temp_feed.xml ] && [ $(wc -c < temp_feed.xml) -gt 500 ]; then
               items=$(grep -zPo '(?s)<item>.*?</item>' temp_feed.xml | tr -d '\0') || true
               if [ ! -z "$items" ]; then
                 if [ "$cat" == "news" ]; then
@@ -86,7 +86,7 @@ jobs:
         run: |
           git config --global user.name "SkyBot"
           git config --global user.email "bot@sky.com"
-          echo "{\"lastUpdated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/status.json
+          echo "{\"lastUpdated\": \"$(date -u +%Y-%29} UTC)\" > public/status.json
           git add public/
           git commit -m "🌪️ Sync $(date -u +%H:%M) UTC" || exit 0
           git push
