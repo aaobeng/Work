@@ -12,73 +12,86 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Fetch and Merge
+      - name: Fetch and Process All Feeds
         shell: bash
         run: |
           mkdir -p public
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
-          # --- CATEGORY 1: NEWS ---
-          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync News</title>' > public/news.xml
-          feeds_news=(
-            "https://www.ghanaweb.com/rss/home.php"
-            "https://www.graphic.com.gh/rss.xml"
-            "https://www.pulse.com.gh/feeds/news"
-            "https://citinewsroom.com/feed/"
-            "https://www.myjoyonline.com/feed/"
-            "http://rss.cnn.com/rss/edition.rss"
-            "http://feeds.bbci.co.uk/news/world/rss.xml"
-            "https://www.aljazeera.com/xml/rss/all.xml"
+          # 1. Define all feeds in an array for easy debugging
+          # Format: "FILENAME|URL"
+          feeds=(
+            "gh_news|https://www.ghanaweb.com/rss/home.php"
+            "gh_news|https://www.graphic.com.gh/rss.xml"
+            "gh_news|https://www.pulse.com.gh/feeds/news"
+            "gh_news|https://citinewsroom.com/feed/"
+            "gh_news|https://www.myjoyonline.com/feed/"
+            "gh_footy|https://ghanasoccernet.com/feed"
+            "gh_footy|https://www.myjoyonline.com/sports/feed/"
+            "gh_footy|https://www.modernghana.com/sports/rss.xml"
+            "gh_footy|https://footballmadeinghana.com/feed/"
+            "intl_footy|https://www.skysports.com/rss/12040"
+            "intl_footy|https://www.fifa.com/rss/index.xml"
+            "intl_footy|https://www.espn.com/espn/rss/soccer/news"
+            "intl_footy|http://feeds.bbci.co.uk/sport/football/rss.xml"
+            "intl_footy|https://www.premierleague.com/rss/news.xml"
+            "intl_footy|https://www.laliga.com/en-GB/rss"
+            "intl_footy|https://www.bundesliga.com/en/bundesliga/news/feed"
+            "intl_footy|https://www.legaseriea.it/en-GB/rss"
+            "intl_footy|https://www.ligue1.com/rss"
+            "intl_footy|https://www.uefa.com/rssfeed/uefachampionsleague/"
+            "intl_footy|https://www.uefa.com/rssfeed/uefaeuropaleague/"
+            "intl_footy|https://www.mlssoccer.com/rss"
+            "intl_footy|https://www.cbf.com.br/rss"
+            "other_sports|https://www.skysports.com/rss/12433"
+            "other_sports|https://www.skysports.com/rss/12110"
+            "other_sports|https://www.espn.com/espn/rss/nba/news"
+            "other_sports|https://www.skysports.com/rss/12027"
+            "other_sports|https://www.eurosport.com/rss.xml"
+            "intl_news|http://rss.cnn.com/rss/edition.rss"
+            "intl_news|http://feeds.bbci.co.uk/news/world/rss.xml"
+            "intl_news|https://www.aljazeera.com/xml/rss/all.xml"
           )
-          for url in "${feeds_news[@]}"; do
-            curl -sL -A "$UA" --max-time 10 "$url" | grep -oP '(?s)<item>.*?</item>' >> public/news.xml || echo "Skipped $url"
+
+          # 2. Initialize Master Files
+          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>News</title>' > public/news.xml
+          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Football</title>' > public/football.xml
+          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sports</title>' > public/other_sports.xml
+
+          # 3. Loop through feeds and append <item> blocks
+          for entry in "${feeds[@]}"; do
+            IFS="|" read -r category url <<< "$entry"
+            echo "Processing: $url"
+            
+            # Fetch with a 15s timeout. If it fails, it just echoes a warning and moves on.
+            content=$(curl -sL -A "$UA" --max-time 15 --connect-timeout 10 "$url" || echo "FAILED")
+            
+            if [[ "$content" != "FAILED" ]]; then
+              # Extract all <item> blocks using grep
+              items=$(echo "$content" | grep -zPo '(?s)<item>.*?</item>' | tr -d '\0')
+              
+              if [[ "$category" == "gh_news" || "$category" == "intl_news" ]]; then
+                echo "$items" >> public/news.xml
+              elif [[ "$category" == "gh_footy" || "$category" == "intl_footy" ]]; then
+                echo "$items" >> public/football.xml
+              else
+                echo "$items" >> public/other_sports.xml
+              fi
+              echo "✅ Appended items from $url"
+            else
+              echo "⚠️ Warning: Could not reach $url"
+            fi
           done
+
+          # 4. Close RSS tags
           echo '</channel></rss>' >> public/news.xml
-
-          # --- CATEGORY 2: FOOTBALL ---
-          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync Football</title>' > public/football.xml
-          feeds_footy=(
-            "https://ghanasoccernet.com/feed"
-            "https://www.myjoyonline.com/sports/feed/"
-            "https://www.modernghana.com/sports/rss.xml"
-            "https://footballmadeinghana.com/feed/"
-            "https://www.skysports.com/rss/12040"
-            "https://www.fifa.com/rss/index.xml"
-            "https://www.espn.com/espn/rss/soccer/news"
-            "http://feeds.bbci.co.uk/sport/football/rss.xml"
-            "https://www.premierleague.com/rss/news.xml"
-            "https://www.laliga.com/en-GB/rss"
-            "https://www.bundesliga.com/en/bundesliga/news/feed"
-            "https://www.legaseriea.it/en/feeds/news.xml"
-            "https://www.ligue1.com/rss"
-            "https://www.uefa.com/rssfeed/uefachampionsleague/"
-            "https://www.uefa.com/rssfeed/uefaeuropaleague/"
-            "https://www.mlssoccer.com/rss"
-            "https://www.cbf.com.br/rss"
-          )
-          for url in "${feeds_footy[@]}"; do
-            curl -sL -A "$UA" --max-time 10 "$url" | grep -oP '(?s)<item>.*?</item>' >> public/football.xml || echo "Skipped $url"
-          done
           echo '</channel></rss>' >> public/football.xml
-
-          # --- CATEGORY 3: OTHER SPORTS ---
-          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync Sports</title>' > public/other_sports.xml
-          feeds_other=(
-            "https://www.skysports.com/rss/12433"
-            "https://www.skysports.com/rss/12110"
-            "https://www.espn.com/espn/rss/nba/news"
-            "https://www.skysports.com/rss/12027"
-            "https://www.eurosport.com/rss.xml"
-          )
-          for url in "${feeds_other[@]}"; do
-            curl -sL -A "$UA" --max-time 10 "$url" | grep -oP '(?s)<item>.*?</item>' >> public/other_sports.xml || echo "Skipped $url"
-          done
           echo '</channel></rss>' >> public/other_sports.xml
 
-      - name: Deploy
+      - name: Deploy to GitHub
         run: |
           git config --global user.name "SkyBot"
           git config --global user.email "bot@sky.com"
