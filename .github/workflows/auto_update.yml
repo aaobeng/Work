@@ -15,100 +15,86 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fetch and Process
+      - name: Sync All Feeds
         shell: bash
         run: |
           mkdir -p public
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
           
-          declare -A feeds=(
-            ["gh_web"]="https://www.ghanaweb.com/rss/home.php"
-            ["gh_gra"]="https://www.graphic.com.gh/rss.xml"
-            ["gh_pul"]="https://www.pulse.com.gh/feeds/news"
-            ["gh_cit"]="https://citinewsroom.com/feed/"
-            ["gh_joy"]="https://www.myjoyonline.com/feed/"
-            ["gh_soc"]="https://ghanasoccernet.com/feed"
-            ["gh_jsp"]="https://www.myjoyonline.com/sports/feed/"
-            ["gh_mod"]="https://www.modernghana.com/sports/rss.xml"
-            ["gh_fmg"]="https://footballmadeinghana.com/feed/"
-            ["it_sky"]="https://www.skysports.com/rss/12040"
-            ["it_fif"]="https://www.fifa.com/rss/index.xml"
-            ["it_esp"]="https://www.espn.com/espn/rss/soccer/news"
-            ["it_bbc"]="http://feeds.bbci.co.uk/sport/football/rss.xml"
-            ["it_pre"]="https://www.premierleague.com/rss/news.xml"
-            ["it_lal"]="https://www.laliga.com/en-GB/rss"
-            ["it_bun"]="https://www.bundesliga.com/en/bundesliga/news/feed"
-            ["it_ser"]="https://www.legaseriea.it/en/feeds/news.xml"
-            ["it_lig"]="https://www.ligue1.com/rss"
-            ["it_ucl"]="https://www.uefa.com/rssfeed/uefachampionsleague/"
-            ["it_uel"]="https://www.uefa.com/rssfeed/uefaeuropaleague/"
-            ["it_mls"]="https://www.mlssoccer.com/rss"
-            ["it_cbf"]="https://www.cbf.com.br/rss"
-            ["sp_f1"]="https://www.skysports.com/rss/12433"
-            ["sp_ten"]="https://www.skysports.com/rss/12110"
-            ["sp_nba"]="https://www.espn.com/espn/rss/nba/news"
-            ["sp_cri"]="https://www.skysports.com/rss/12027"
-            ["sp_mix"]="https://www.eurosport.com/rss.xml"
-            ["nw_cnn"]="http://rss.cnn.com/rss/edition.rss"
-            ["nw_bbc"]="http://feeds.bbci.co.uk/news/world/rss.xml"
-            ["nw_alj"]="https://www.aljazeera.com/xml/rss/all.xml"
-          )
+          # 1. FETCH FUNCTION
+          fetch() {
+            curl -sL -A "$UA" "$1" -o "$2" --max-time 15 --retry 1 || echo "Failed $1"
+          }
 
-          for id in "${!feeds[@]}"; do
-            curl -sL -A "$UA" "${feeds[$id]}" -o "public/${id}.xml" --max-time 15 || echo "Skip ${id}"
-          done
+          # --- GHANA NEWS ---
+          fetch "https://www.ghanaweb.com/rss/home.php" "gh_web.xml"
+          fetch "https://www.graphic.com.gh/rss.xml" "gh_gra.xml"
+          fetch "https://www.pulse.com.gh/feeds/news" "gh_pul.xml"
+          fetch "https://citinewsroom.com/feed/" "gh_cit.xml"
+          fetch "https://www.myjoyonline.com/feed/" "gh_joy.xml"
 
-          python3 - <<'EOF'
-          import xml.etree.ElementTree as ET
-          import os
-          from datetime import datetime, timedelta, timezone
-          from email.utils import parsedate_to_datetime
+          # --- GHANA FOOTBALL ---
+          fetch "https://ghanasoccernet.com/feed" "gh_soc.xml"
+          fetch "https://www.myjoyonline.com/sports/feed/" "gh_jsp.xml"
+          fetch "https://www.modernghana.com/sports/rss.xml" "gh_mod.xml"
+          fetch "https://footballmadeinghana.com/feed/" "gh_fmg.xml"
 
-          def get_items(fn):
-              p = f"public/{fn}.xml"
-              if not os.path.exists(p) or os.path.getsize(p) < 300: return []
-              try: return ET.parse(p).getroot().findall('.//item')
-              except: return []
+          # --- INTERNATIONAL FOOTBALL ---
+          fetch "https://www.skysports.com/rss/12040" "it_sky.xml"
+          fetch "https://www.fifa.com/rss/index.xml" "it_fif.xml"
+          fetch "https://www.espn.com/espn/rss/soccer/news" "it_esp.xml"
+          fetch "http://feeds.bbci.co.uk/sport/football/rss.xml" "it_bbc_f.xml"
+          fetch "https://www.premierleague.com/rss/news.xml" "it_pre.xml"
+          fetch "https://www.laliga.com/en-GB/rss" "it_lal.xml"
+          fetch "https://www.bundesliga.com/en/bundesliga/news/feed" "it_bun.xml"
+          fetch "https://www.legaseriea.it/en/feeds/news.xml" "it_ser.xml"
+          fetch "https://www.ligue1.com/rss" "it_lig.xml"
+          fetch "https://www.uefa.com/rssfeed/uefachampionsleague/" "it_ucl.xml"
+          fetch "https://www.uefa.com/rssfeed/uefaeuropaleague/" "it_uel.xml"
+          fetch "https://www.mlssoccer.com/rss" "it_mls.xml"
+          fetch "https://www.cbf.com.br/rss" "it_cbf.xml"
 
-          def recent(it):
-              pb = it.find('pubDate')
-              if pb is None or not pb.text: return False
-              try:
-                  dt = parsedate_to_datetime(pb.text)
-                  if dt.tzinfo is None: dt = dt.replace(tzinfo=timezone.utc)
-                  return datetime.now(timezone.utc) - dt <= timedelta(hours=24)
-              except: return False
+          # --- OTHER SPORTS ---
+          fetch "https://www.skysports.com/rss/12433" "sp_f1.xml"
+          fetch "https://www.skysports.com/rss/12110" "sp_ten.xml"
+          fetch "https://www.espn.com/espn/rss/nba/news" "sp_nba.xml"
+          fetch "https://www.skysports.com/rss/12027" "sp_cri.xml"
+          fetch "https://www.eurosport.com/rss.xml" "sp_mix.xml"
 
-          def sync(ids, out, title):
-              items = []
-              if os.path.exists(out): items.extend(ET.parse(out).getroot().findall('.//item'))
-              for i in ids: items.extend(get_items(i))
-              seen, final = set(), []
-              for it in items:
-                  l = it.find('link')
-                  u = l.text.strip() if l is not None and l.text else None
-                  if u and u not in seen and recent(it):
-                      seen.add(u); final.append(it)
-              r = ET.Element('rss', version='2.0')
-              c = ET.SubElement(r, 'channel')
-              ET.SubElement(c, 'title').text = title
-              for x in final: c.append(x)
-              ET.ElementTree(r).write(out, encoding='utf-8', xml_declaration=True)
+          # --- INTERNATIONAL NEWS ---
+          fetch "http://rss.cnn.com/rss/edition.rss" "nw_cnn.xml"
+          fetch "http://feeds.bbci.co.uk/news/world/rss.xml" "nw_bbc.xml"
+          fetch "https://www.aljazeera.com/xml/rss/all.xml" "nw_alj.xml"
 
-          news_ids = ["gh_web","gh_gra","gh_pul","gh_cit","gh_joy","nw_cnn","nw_bbc","nw_alj"]
-          foot_ids = ["gh_soc","gh_jsp","gh_mod","gh_fmg","it_sky","it_fif","it_esp","it_bbc","it_pre","it_lal","it_bun","it_ser","it_lig","it_ucl","it_uel","it_mls","it_cbf"]
-          oth_ids = ["sp_f1","sp_ten","sp_nba","sp_cri","sp_mix"]
+          # 2. PROCESSING FUNCTION (BASH ONLY)
+          # Uses grep to extract items and avoids XML parsing errors
+          merge_feeds() {
+            local outfile="public/$1"
+            shift
+            echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync</title>' > "$outfile"
+            
+            # Extract items from listed files, deduplicate links, and take top 50
+            grep -hzoP '(?s)<item>.*?</item>' "$@" | tr -d '\0' | awk '!x[$0]++' | head -n 100 >> "$outfile"
+            
+            echo '</channel></rss>' >> "$outfile"
+          }
 
-          sync(news_ids, "public/news.xml", "MegaSync News")
-          sync(foot_ids, "public/football.xml", "MegaSync Football")
-          sync(oth_ids, "public/other_sports.xml", "MegaSync Other")
-          EOF
+          # 3. GROUPING
+          # News Group
+          merge_feeds "news.xml" gh_web.xml gh_gra.xml gh_pul.xml gh_cit.xml gh_joy.xml nw_cnn.xml nw_bbc.xml nw_alj.xml
+          
+          # Football Group
+          merge_feeds "football.xml" gh_soc.xml gh_jsp.xml gh_mod.xml gh_fmg.xml it_sky.xml it_fif.xml it_esp.xml it_bbc_f.xml it_pre.xml it_lal.xml it_bun.xml it_ser.xml it_lig.xml it_ucl.xml it_uel.xml it_mls.xml it_cbf.xml
+          
+          # Other Sports Group
+          merge_feeds "other_sports.xml" sp_f1.xml sp_ten.xml sp_nba.xml sp_cri.xml sp_mix.xml
 
-      - name: Commit
+      - name: Deploy Changes
         run: |
           git config --global user.name "SkyBot"
-          git config --global user.email "bot@sky.com"
+          git config --global user.email "actions@github.com"
+          rm -f *.xml # Clean up temporary fetch files
           echo "{\"lastUpdated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/status.json
           git add public/
-          git commit -m "🌪️ Sync $(date -u +%H:%M)" || exit 0
+          git commit -m "🌪️ SkyBot: Sync $(date -u +%H:%M) UTC" || exit 0
           git push
