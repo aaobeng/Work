@@ -1,32 +1,27 @@
 name: Ghana & Sports Mega-Sync
-
 on:
   schedule:
     - cron: '*/15 * * * *'
   workflow_dispatch:
-
+permissions:
+  contents: write
+  workflows: write
 jobs:
   sync:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Fetch and Merge
         shell: bash
         run: |
           mkdir -p public
           # Updated User Agent to look like a modern Chrome browser
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
-          
           # Initialize Master Files
           echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>News</title>' > public/news.xml
           echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Football</title>' > public/football.xml
           echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Sports</title>' > public/other_sports.xml
-
           # Feed List: Category|URL
           feeds=(
             "news|https://www.ghanaweb.com/rss/home.php"
@@ -60,21 +55,21 @@ jobs:
             "othr|https://www.skysports.com/rss/12027"
             "othr|https://www.eurosport.com/rss.xml"
           )
-
           for entry in "${feeds[@]}"; do
             IFS="|" read -r cat url <<< "$entry"
             echo "Fetching: $url"
-            
             # Use a temporary file to prevent grep from hanging on empty pipes
             # We add || true to prevent exit code 92 from stopping the script
             curl -sL -A "$UA" --max-time 20 --connect-timeout 15 "$url" -o temp_feed.xml || true
-            
             if [ -f temp_feed.xml ] && [ $(stat -c%s temp_feed.xml) -gt 500 ]; then
               items=$(grep -zPo '(?s)<item>.*?</item>' temp_feed.xml | tr -d '\0') || true
               if [ ! -z "$items" ]; then
-                if [ "$cat" == "news" ]; then echo "$items" >> public/news.xml
-                elif [ "$cat" == "foot" ]; then echo "$items" >> public/football.xml
-                else echo "$items" >> public/other_sports.xml
+                if [ "$cat" == "news" ]; then
+                  echo "$items" >> public/news.xml
+                elif [ "$cat" == "foot" ]; then
+                  echo "$items" >> public/football.xml
+                else
+                  echo "$items" >> public/other_sports.xml
                 fi
                 echo "✅ Success"
               fi
@@ -83,12 +78,10 @@ jobs:
             fi
             rm -f temp_feed.xml
           done
-
           # Close Master Files
           echo '</channel></rss>' >> public/news.xml
           echo '</channel></rss>' >> public/football.xml
           echo '</channel></rss>' >> public/other_sports.xml
-
       - name: Deploy
         run: |
           git config --global user.name "SkyBot"
