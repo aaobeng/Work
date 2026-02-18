@@ -21,7 +21,6 @@ jobs:
       - name: Fetch All Feeds
         shell: bash
         run: |
-          # --- Create public folder safely ---
           echo "Creating public directory..."
           mkdir -p public
 
@@ -71,98 +70,98 @@ jobs:
           curl -sL -A "$UA" "https://www.aljazeera.com/xml/rss/all.xml" -o public/intl_aljazeera.xml
 
           # --- PROCESS AND FILTER LAST 24H ---
-          python3 - <<EOF
-import xml.etree.ElementTree as ET
-import os
-from datetime import datetime, timedelta
-from email.utils import parsedate_to_datetime
+          python3 - <<'PYTHON_EOF'
+            import xml.etree.ElementTree as ET
+            import os
+            from datetime import datetime, timedelta
+            from email.utils import parsedate_to_datetime
 
-RETENTION_HOURS = 24
+            RETENTION_HOURS = 24
 
-def parse_items(path):
-    if not os.path.exists(path) or os.path.getsize(path) < 500:
-        return []
-    try:
-        root = ET.parse(path).getroot()
-        return root.findall('.//item')
-    except:
-        return []
+            def parse_items(path):
+                if not os.path.exists(path) or os.path.getsize(path) < 500:
+                    return []
+                try:
+                    root = ET.parse(path).getroot()
+                    return root.findall('.//item')
+                except:
+                    return []
 
-def load_existing(file):
-    if not os.path.exists(file):
-        return []
-    try:
-        root = ET.parse(file).getroot()
-        return root.findall('.//item')
-    except:
-        return []
+            def load_existing(file):
+                if not os.path.exists(file):
+                    return []
+                try:
+                    root = ET.parse(file).getroot()
+                    return root.findall('.//item')
+                except:
+                    return []
 
-def is_recent(item):
-    pub = item.find('pubDate')
-    if pub is None:
-        return False
-    try:
-        pub_date = parsedate_to_datetime(pub.text)
-        return datetime.utcnow() - pub_date <= timedelta(hours=RETENTION_HOURS)
-    except:
-        return False
+            def is_recent(item):
+                pub = item.find('pubDate')
+                if pub is None:
+                    return False
+                try:
+                    pub_date = parsedate_to_datetime(pub.text)
+                    return datetime.utcnow() - pub_date <= timedelta(hours=RETENTION_HOURS)
+                except:
+                    return False
 
-def save_filtered(sources, output):
-    existing = load_existing(output)
-    all_items = []
-    seen_links = set()
+            def save_filtered(sources, output):
+                existing = load_existing(output)
+                all_items = []
+                seen_links = set()
 
-    for source in sources:
-        all_items.extend(source)
-    all_items.extend(existing)
+                for source in sources:
+                    all_items.extend(source)
+                all_items.extend(existing)
 
-    filtered = []
-    for item in all_items:
-        link = item.find('link')
-        if link is None:
-            continue
-        if link.text in seen_links:
-            continue
-        if not is_recent(item):
-            continue
-        seen_links.add(link.text)
-        filtered.append(item)
+                filtered = []
+                for item in all_items:
+                    link = item.find('link')
+                    if link is None:
+                        continue
+                    if link.text in seen_links:
+                        continue
+                    if not is_recent(item):
+                        continue
+                    seen_links.add(link.text)
+                    filtered.append(item)
 
-    root = ET.Element('rss', version='2.0')
-    channel = ET.SubElement(root, 'channel')
-    ET.SubElement(channel, 'title').text = "MegaSync"
+                root = ET.Element('rss', version='2.0')
+                channel = ET.SubElement(root, 'channel')
+                ET.SubElement(channel, 'title').text = "MegaSync"
 
-    for item in filtered:
-        channel.append(item)
+                for item in filtered:
+                    channel.append(item)
 
-    ET.ElementTree(root).write(output, encoding='utf-8', xml_declaration=True)
+                ET.ElementTree(root).write(output, encoding='utf-8', xml_declaration=True)
 
-# --- Prepare sources ---
-gh_news_sources = [parse_items(f) for f in [
-    "public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml"
-]]
-gh_football_sources = [parse_items(f) for f in [
-    "public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml"
-]]
-intl_news_sources = [parse_items(f) for f in [
-    "public/intl_cnn.xml","public/intl_bbc.xml","public/intl_reuters.xml","public/intl_aljazeera.xml"
-]]
-intl_football_sources = [parse_items(f) for f in [
-    "public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml",
-    "public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml",
-    "public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml",
-    "public/intl_mls.xml","public/intl_brasileirao.xml"
-]]
-other_sports_sources = [parse_items(f) for f in [
-    "public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml",
-    "public/sports_cricket.xml","public/sports_mixed.xml"
-]]
+            # --- Prepare sources ---
+            gh_news_sources = [parse_items(f) for f in [
+                "public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml"
+            ]]
+            gh_football_sources = [parse_items(f) for f in [
+                "public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml"
+            ]]
+            intl_news_sources = [parse_items(f) for f in [
+                "public/intl_cnn.xml","public/intl_bbc.xml","public/intl_reuters.xml","public/intl_aljazeera.xml"
+            ]]
+            intl_football_sources = [parse_items(f) for f in [
+                "public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml",
+                "public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml",
+                "public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml",
+                "public/intl_mls.xml","public/intl_brasileirao.xml"
+            ]]
+            other_sports_sources = [parse_items(f) for f in [
+                "public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml",
+                "public/sports_cricket.xml","public/sports_mixed.xml"
+            ]]
 
-# --- Save each category ---
-save_filtered(gh_news_sources + intl_news_sources, "public/news.xml")
-save_filtered(gh_football_sources + intl_football_sources, "public/football.xml")
-save_filtered(other_sports_sources, "public/other_sports.xml")
-EOF
+            # --- Save each category ---
+            save_filtered(gh_news_sources + intl_news_sources, "public/news.xml")
+            save_filtered(gh_football_sources + intl_football_sources, "public/football.xml")
+            save_filtered(other_sports_sources, "public/other_sports.xml")
+
 
       - name: Update status.json
         run: |
