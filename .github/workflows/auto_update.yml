@@ -15,86 +15,74 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Sync All Feeds
+      - name: Fetch and Merge
         shell: bash
         run: |
           mkdir -p public
-          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
-          # 1. FETCH FUNCTION
-          fetch() {
-            curl -sL -A "$UA" "$1" -o "$2" --max-time 15 --retry 1 || echo "Failed $1"
-          }
+          # --- CATEGORY 1: NEWS ---
+          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync News</title>' > public/news.xml
+          feeds_news=(
+            "https://www.ghanaweb.com/rss/home.php"
+            "https://www.graphic.com.gh/rss.xml"
+            "https://www.pulse.com.gh/feeds/news"
+            "https://citinewsroom.com/feed/"
+            "https://www.myjoyonline.com/feed/"
+            "http://rss.cnn.com/rss/edition.rss"
+            "http://feeds.bbci.co.uk/news/world/rss.xml"
+            "https://www.aljazeera.com/xml/rss/all.xml"
+          )
+          for url in "${feeds_news[@]}"; do
+            curl -sL -A "$UA" --max-time 10 "$url" | grep -oP '(?s)<item>.*?</item>' >> public/news.xml || echo "Skipped $url"
+          done
+          echo '</channel></rss>' >> public/news.xml
 
-          # --- GHANA NEWS ---
-          fetch "https://www.ghanaweb.com/rss/home.php" "gh_web.xml"
-          fetch "https://www.graphic.com.gh/rss.xml" "gh_gra.xml"
-          fetch "https://www.pulse.com.gh/feeds/news" "gh_pul.xml"
-          fetch "https://citinewsroom.com/feed/" "gh_cit.xml"
-          fetch "https://www.myjoyonline.com/feed/" "gh_joy.xml"
+          # --- CATEGORY 2: FOOTBALL ---
+          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync Football</title>' > public/football.xml
+          feeds_footy=(
+            "https://ghanasoccernet.com/feed"
+            "https://www.myjoyonline.com/sports/feed/"
+            "https://www.modernghana.com/sports/rss.xml"
+            "https://footballmadeinghana.com/feed/"
+            "https://www.skysports.com/rss/12040"
+            "https://www.fifa.com/rss/index.xml"
+            "https://www.espn.com/espn/rss/soccer/news"
+            "http://feeds.bbci.co.uk/sport/football/rss.xml"
+            "https://www.premierleague.com/rss/news.xml"
+            "https://www.laliga.com/en-GB/rss"
+            "https://www.bundesliga.com/en/bundesliga/news/feed"
+            "https://www.legaseriea.it/en/feeds/news.xml"
+            "https://www.ligue1.com/rss"
+            "https://www.uefa.com/rssfeed/uefachampionsleague/"
+            "https://www.uefa.com/rssfeed/uefaeuropaleague/"
+            "https://www.mlssoccer.com/rss"
+            "https://www.cbf.com.br/rss"
+          )
+          for url in "${feeds_footy[@]}"; do
+            curl -sL -A "$UA" --max-time 10 "$url" | grep -oP '(?s)<item>.*?</item>' >> public/football.xml || echo "Skipped $url"
+          done
+          echo '</channel></rss>' >> public/football.xml
 
-          # --- GHANA FOOTBALL ---
-          fetch "https://ghanasoccernet.com/feed" "gh_soc.xml"
-          fetch "https://www.myjoyonline.com/sports/feed/" "gh_jsp.xml"
-          fetch "https://www.modernghana.com/sports/rss.xml" "gh_mod.xml"
-          fetch "https://footballmadeinghana.com/feed/" "gh_fmg.xml"
+          # --- CATEGORY 3: OTHER SPORTS ---
+          echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync Sports</title>' > public/other_sports.xml
+          feeds_other=(
+            "https://www.skysports.com/rss/12433"
+            "https://www.skysports.com/rss/12110"
+            "https://www.espn.com/espn/rss/nba/news"
+            "https://www.skysports.com/rss/12027"
+            "https://www.eurosport.com/rss.xml"
+          )
+          for url in "${feeds_other[@]}"; do
+            curl -sL -A "$UA" --max-time 10 "$url" | grep -oP '(?s)<item>.*?</item>' >> public/other_sports.xml || echo "Skipped $url"
+          done
+          echo '</channel></rss>' >> public/other_sports.xml
 
-          # --- INTERNATIONAL FOOTBALL ---
-          fetch "https://www.skysports.com/rss/12040" "it_sky.xml"
-          fetch "https://www.fifa.com/rss/index.xml" "it_fif.xml"
-          fetch "https://www.espn.com/espn/rss/soccer/news" "it_esp.xml"
-          fetch "http://feeds.bbci.co.uk/sport/football/rss.xml" "it_bbc_f.xml"
-          fetch "https://www.premierleague.com/rss/news.xml" "it_pre.xml"
-          fetch "https://www.laliga.com/en-GB/rss" "it_lal.xml"
-          fetch "https://www.bundesliga.com/en/bundesliga/news/feed" "it_bun.xml"
-          fetch "https://www.legaseriea.it/en/feeds/news.xml" "it_ser.xml"
-          fetch "https://www.ligue1.com/rss" "it_lig.xml"
-          fetch "https://www.uefa.com/rssfeed/uefachampionsleague/" "it_ucl.xml"
-          fetch "https://www.uefa.com/rssfeed/uefaeuropaleague/" "it_uel.xml"
-          fetch "https://www.mlssoccer.com/rss" "it_mls.xml"
-          fetch "https://www.cbf.com.br/rss" "it_cbf.xml"
-
-          # --- OTHER SPORTS ---
-          fetch "https://www.skysports.com/rss/12433" "sp_f1.xml"
-          fetch "https://www.skysports.com/rss/12110" "sp_ten.xml"
-          fetch "https://www.espn.com/espn/rss/nba/news" "sp_nba.xml"
-          fetch "https://www.skysports.com/rss/12027" "sp_cri.xml"
-          fetch "https://www.eurosport.com/rss.xml" "sp_mix.xml"
-
-          # --- INTERNATIONAL NEWS ---
-          fetch "http://rss.cnn.com/rss/edition.rss" "nw_cnn.xml"
-          fetch "http://feeds.bbci.co.uk/news/world/rss.xml" "nw_bbc.xml"
-          fetch "https://www.aljazeera.com/xml/rss/all.xml" "nw_alj.xml"
-
-          # 2. PROCESSING FUNCTION (BASH ONLY)
-          # Uses grep to extract items and avoids XML parsing errors
-          merge_feeds() {
-            local outfile="public/$1"
-            shift
-            echo '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>MegaSync</title>' > "$outfile"
-            
-            # Extract items from listed files, deduplicate links, and take top 50
-            grep -hzoP '(?s)<item>.*?</item>' "$@" | tr -d '\0' | awk '!x[$0]++' | head -n 100 >> "$outfile"
-            
-            echo '</channel></rss>' >> "$outfile"
-          }
-
-          # 3. GROUPING
-          # News Group
-          merge_feeds "news.xml" gh_web.xml gh_gra.xml gh_pul.xml gh_cit.xml gh_joy.xml nw_cnn.xml nw_bbc.xml nw_alj.xml
-          
-          # Football Group
-          merge_feeds "football.xml" gh_soc.xml gh_jsp.xml gh_mod.xml gh_fmg.xml it_sky.xml it_fif.xml it_esp.xml it_bbc_f.xml it_pre.xml it_lal.xml it_bun.xml it_ser.xml it_lig.xml it_ucl.xml it_uel.xml it_mls.xml it_cbf.xml
-          
-          # Other Sports Group
-          merge_feeds "other_sports.xml" sp_f1.xml sp_ten.xml sp_nba.xml sp_cri.xml sp_mix.xml
-
-      - name: Deploy Changes
+      - name: Deploy
         run: |
           git config --global user.name "SkyBot"
-          git config --global user.email "actions@github.com"
-          rm -f *.xml # Clean up temporary fetch files
+          git config --global user.email "bot@sky.com"
           echo "{\"lastUpdated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/status.json
           git add public/
-          git commit -m "🌪️ SkyBot: Sync $(date -u +%H:%M) UTC" || exit 0
+          git commit -m "🌪️ Sync: $(date -u +%H:%M) UTC" || exit 0
           git push
