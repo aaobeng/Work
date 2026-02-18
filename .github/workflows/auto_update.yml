@@ -16,36 +16,31 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create public folder
-        run: mkdir -p public
 
       - name: Fetch All Feeds
         shell: bash
         run: |
+          mkdir -p public
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           
-          # --- GHANA NEWS ---
+          # GHANA NEWS
           curl -sL -A "$UA" "https://www.ghanaweb.com/rss/home.php" -o public/gh_ghanaweb.xml
           curl -sL -A "$UA" "https://www.graphic.com.gh/rss.xml" -o public/gh_graphic.xml
           curl -sL -A "$UA" "https://www.pulse.com.gh/feeds/news" -o public/gh_pulse.xml
           curl -sL -A "$UA" "https://citinewsroom.com/feed/" -o public/gh_citi.xml
           curl -sL -A "$UA" "https://www.myjoyonline.com/feed/" -o public/gh_joy.xml
 
-          # --- GHANA FOOTBALL ---
+          # GHANA FOOTBALL
           curl -sL -A "$UA" "https://ghanasoccernet.com/feed" -o public/gh_footy.xml
           curl -sL -A "$UA" "https://www.myjoyonline.com/sports/feed/" -o public/gh_joy_sports.xml
           curl -sL -A "$UA" "https://www.modernghana.com/sports/rss.xml" -o public/gh_modern_sports.xml
           curl -sL -A "$UA" "https://footballmadeinghana.com/feed/" -o public/gh_fm_football.xml
 
-          # --- INTERNATIONAL FOOTBALL ---
+          # INT FOOTBALL & LEAGUES
           curl -sL -A "$UA" "https://www.skysports.com/rss/12040" -o public/intl_skyfootball.xml
           curl -sL -A "$UA" "https://www.fifa.com/rss/index.xml" -o public/intl_fifa.xml
           curl -sL -A "$UA" "https://www.espn.com/espn/rss/soccer/news" -o public/intl_espn.xml
           curl -sL -A "$UA" "http://feeds.bbci.co.uk/sport/football/rss.xml" -o public/intl_bbcfootball.xml
-
-          # --- INTERNATIONAL LEAGUES ---
           curl -sL -A "$UA" "https://www.premierleague.com/rss/news.xml" -o public/intl_premierleague.xml
           curl -sL -A "$UA" "https://www.laliga.com/en-GB/rss" -o public/intl_laliga.xml
           curl -sL -A "$UA" "https://www.bundesliga.com/en/bundesliga/news/feed" -o public/intl_bundesliga.xml
@@ -56,14 +51,14 @@ jobs:
           curl -sL -A "$UA" "https://www.mlssoccer.com/rss" -o public/intl_mls.xml
           curl -sL -A "$UA" "https://www.cbf.com.br/rss" -o public/intl_brasileirao.xml
 
-          # --- OTHER SPORTS ---
+          # OTHER SPORTS
           curl -sL -A "$UA" "https://www.skysports.com/rss/12433" -o public/sports_f1.xml
           curl -sL -A "$UA" "https://www.skysports.com/rss/12110" -o public/sports_tennis.xml
           curl -sL -A "$UA" "https://www.espn.com/espn/rss/nba/news" -o public/sports_basketball.xml
           curl -sL -A "$UA" "https://www.skysports.com/rss/12027" -o public/sports_cricket.xml
           curl -sL -A "$UA" "https://www.eurosport.com/rss.xml" -o public/sports_mixed.xml
 
-          # --- INTERNATIONAL NEWS ---
+          # INT NEWS
           curl -sL -A "$UA" "http://rss.cnn.com/rss/edition.rss" -o public/intl_cnn.xml
           curl -sL -A "$UA" "http://feeds.bbci.co.uk/news/world/rss.xml" -o public/intl_bbc.xml
           curl -sL -A "$UA" "https://www.aljazeera.com/xml/rss/all.xml" -o public/intl_aljazeera.xml
@@ -71,7 +66,7 @@ jobs:
       - name: Process and Filter
         shell: bash
         run: |
-          python3 - <<'EOF'
+          python3 - <<'PYTHON_EOF'
           import xml.etree.ElementTree as ET
           import os
           from datetime import datetime, timedelta, timezone
@@ -99,7 +94,7 @@ jobs:
 
           def is_recent(item):
               pub = item.find('pubDate')
-              if pub is None:
+              if pub is None or not pub.text:
                   return False
               try:
                   pub_date = parsedate_to_datetime(pub.text)
@@ -109,26 +104,22 @@ jobs:
               except:
                   return False
 
-          def save_filtered(sources, output):
-              existing = load_existing(output)
-              all_items = []
+          def save_filtered(sources_paths, output):
+              all_items = load_existing(output)
+              for path in sources_paths:
+                  all_items.extend(parse_items(path))
+
               seen_links = set()
-
-              for source in sources:
-                  all_items.extend(source)
-              all_items.extend(existing)
-
               filtered = []
+              
               for item in all_items:
                   link = item.find('link')
                   if link is None or not link.text:
                       continue
-                  if link.text in seen_links:
-                      continue
-                  if not is_recent(item):
-                      continue
-                  seen_links.add(link.text)
-                  filtered.append(item)
+                  clean_link = link.text.strip()
+                  if clean_link not in seen_links and is_recent(item):
+                      seen_links.add(clean_link)
+                      filtered.append(item)
 
               root = ET.Element('rss', version='2.0')
               channel = ET.SubElement(root, 'channel')
@@ -140,33 +131,21 @@ jobs:
 
               ET.ElementTree(root).write(output, encoding='utf-8', xml_declaration=True)
 
-          # --- Source Groups ---
-          gh_news = [parse_items(f) for f in ["public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml"]]
-          intl_news = [parse_items(f) for f in ["public/intl_cnn.xml","public/intl_bbc.xml","public/intl_aljazeera.xml"]]
-          
-          gh_footy = [parse_items(f) for f in ["public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml"]]
-          intl_footy = [parse_items(f) for f in [
-              "public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml",
-              "public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml",
-              "public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml","public/intl_mls.xml","public/intl_brasileirao.xml"
-          ]]
-          
-          other_sports = [parse_items(f) for f in ["public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml","public/sports_cricket.xml","public/sports_mixed.xml"]]
+          # CATEGORIES
+          news_src = ["public/gh_ghanaweb.xml","public/gh_graphic.xml","public/gh_pulse.xml","public/gh_citi.xml","public/gh_joy.xml","public/intl_cnn.xml","public/intl_bbc.xml","public/intl_aljazeera.xml"]
+          foot_src = ["public/gh_footy.xml","public/gh_joy_sports.xml","public/gh_modern_sports.xml","public/gh_fm_football.xml","public/intl_skyfootball.xml","public/intl_fifa.xml","public/intl_espn.xml","public/intl_bbcfootball.xml","public/intl_premierleague.xml","public/intl_laliga.xml","public/intl_bundesliga.xml","public/intl_seriea.xml","public/intl_ligue1.xml","public/intl_uefachampions.xml","public/intl_uefaeuropa.xml","public/intl_mls.xml","public/intl_brasileirao.xml"]
+          sport_src = ["public/sports_f1.xml","public/sports_tennis.xml","public/sports_basketball.xml","public/sports_cricket.xml","public/sports_mixed.xml"]
 
-          # --- Save Outputs ---
-          save_filtered(gh_news + intl_news, "public/news.xml")
-          save_filtered(gh_footy + intl_footy, "public/football.xml")
-          save_filtered(other_sports, "public/other_sports.xml")
-          EOF
+          save_filtered(news_src, "public/news.xml")
+          save_filtered(foot_src, "public/football.xml")
+          save_filtered(sport_src, "public/other_sports.xml")
+          PYTHON_EOF
 
-      - name: Update status.json
-        run: |
-          echo "{\"lastUpdated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/status.json
-
-      - name: Commit Changes
+      - name: Commit and Push
         run: |
           git config --global user.name "SkyBot"
           git config --global user.email "actions@github.com"
+          echo "{\"lastUpdated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > public/status.json
           git add public/
-          git commit -m "🌪️ SkyBot: Sync ($(date -u +%H:%M) UTC)" || echo "No changes"
+          git commit -m "🌪️ SkyBot Sync: $(date -u +%H:%M) UTC" || echo "No changes"
           git push
