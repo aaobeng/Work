@@ -7,13 +7,6 @@
            <category>News Story</category>
            <enclosure type="image/jpg" url="https://e2.365dm.com/26/02/1920x1080/skysports-lewis-hamilton-ferrari_7169469.jpg?20260219161618" length="123456" />
       </item><item>
-           <title><![CDATA[F1 Testing: Antonelli tops second day as Verstappen impresses on long runs]]></title>
-           <description><![CDATA[]]></description>
-           <link>https://www.skysports.com/f1/live-blog/12433/13508497/f1-testing-live-bahrain-test-two-2026-updates-latest-highlights-video-schedule-from-sakhir-in-final-pre-season-action</link>
-           <pubDate>Wed, 18 Feb 2026 06:45:00 GMT</pubDate>
-           <category>Liveblog</category>
-           <enclosure type="image/jpg" url="https://e1.365dm.com/26/02/1920x1080/skysports-kimi-antonelli-mercedes_7164164.jpg?20260213153926" length="123456" />
-      </item><item>
            <title><![CDATA['Another nonsense!' - Wolff fumes despite accepting proposed engine change]]></title>
            <description><![CDATA[Mercedes boss Toto Wolff says he is "philosophically" opposed to the FIA's proposal of a mid-season rule change over a contentious engine element, but says his team are willing to be "good citizens" by accepting it despite it potentially harming their performance.]]></description>
            <link>https://www.skysports.com/f1/news/12433/13509489/mercedes-boss-toto-wolff-says-he-is-philosophically-opposed-to-fias-proposed-mid-season-rule-change-for-f1-engines</link>
@@ -34,6 +27,13 @@
            <pubDate>Thu, 19 Feb 2026 11:23:00 GMT</pubDate>
            <category>Video</category>
            <enclosure type="image/jpg" url="https://e2.365dm.com/26/02/1920x1080/skysports-motorsport-f1_7169470.jpg?20260219161633" length="123456" />
+      </item><item>
+           <title><![CDATA[F1 Testing: Antonelli tops second day as Verstappen impresses on long runs]]></title>
+           <description><![CDATA[]]></description>
+           <link>https://www.skysports.com/f1/live-blog/12433/13508497/f1-testing-live-bahrain-test-two-2026-updates-latest-highlights-video-schedule-from-sakhir-in-final-pre-season-action</link>
+           <pubDate>Wed, 18 Feb 2026 06:45:00 GMT</pubDate>
+           <category>Liveblog</category>
+           <enclosure type="image/jpg" url="https://e1.365dm.com/26/02/1920x1080/skysports-kimi-antonelli-mercedes_7164164.jpg?20260213153926" length="123456" />
       </item><item>
            <title><![CDATA['I'm more connected with this car' - Hamilton 'really excited' for new F1 season ]]></title>
            <description><![CDATA[Lewis Hamilton says he feels "more connected" to Ferrari's 2026 car than its predecessor and that he is "really excited" to see what the team can achieve this season.]]></description>
@@ -63,19 +63,19 @@
            <category>Video</category>
            <enclosure type="image/jpg" url="https://e2.365dm.com/26/02/1920x1080/skysports-bahrain-test-two_7168089.jpg?20260218112925" length="123456" />
       </item><item>
+           <title><![CDATA[Who's done the fastest times and most laps at F1's final pre-season test?]]></title>
+           <description><![CDATA[Find out who has the fastest times and which teams have completed the most laps at the final F1 pre-season test in Bahrain so far.]]></description>
+           <link>https://www.skysports.com/f1/news/12433/13509188/f1-pre-season-testing-2026-fastest-times-and-most-laps-completed-by-each-team-at-final-bahrain-test-in-sakhir</link>
+           <pubDate>Thu, 19 Feb 2026 16:45:00 GMT</pubDate>
+           <category>News Story</category>
+           <enclosure type="image/jpg" url="https://e2.365dm.com/26/02/1920x1080/skysports-lewis-hamilton-f1-pre-season-testing_7168436.jpg?20260218165911" length="123456" />
+      </item><item>
            <title><![CDATA['We've missed this' | Cars go racing as F1 trials new start procedure]]></title>
            <description><![CDATA[Watch the grid line up to complete a practice start at the Bahrain Test Two Day One. ]]></description>
            <link>https://www.skysports.com/watch/video/13509190/weve-missed-this-grid-complete-practice-start</link>
            <pubDate>Wed, 18 Feb 2026 16:19:00 GMT</pubDate>
            <category>Video</category>
            <enclosure type="image/jpg" url="https://e0.365dm.com/26/02/1920x1080/skysports-f1-start_7168411.jpg?20260218162312" length="123456" />
-      </item><item>
-           <title><![CDATA[Who's done the fastest times and most laps at F1's final pre-season test?]]></title>
-           <description><![CDATA[Find out who has the fastest times and which teams have completed the most laps at the final F1 pre-season test in Bahrain so far.]]></description>
-           <link>https://www.skysports.com/f1/news/12433/13509188/f1-pre-season-testing-2026-fastest-times-and-most-laps-completed-by-each-team-at-final-bahrain-test-in-sakhir</link>
-           <pubDate>Wed, 18 Feb 2026 17:00:00 GMT</pubDate>
-           <category>News Story</category>
-           <enclosure type="image/jpg" url="https://e2.365dm.com/26/02/1920x1080/skysports-lewis-hamilton-f1-pre-season-testing_7168436.jpg?20260218165911" length="123456" />
       </item><item>
            <title><![CDATA[F1 bosses holding talks over doubling number of Sprint weekends]]></title>
            <description><![CDATA[]]></description>
@@ -141,12 +141,12 @@
            <enclosure type="image/jpg" url="https://e1.365dm.com/26/02/1920x1080/skysports-george-russell-mercedes_7163257.jpg?20260212144254" length="123456" />
       </item>
 <item>
-           <title><![CDATA[Latest tennis scores: Gauff, Alcaraz, Sinner in action on Thursday]]></title>
+           <title><![CDATA[Latest tennis scores: Alcaraz, Sinner in action with Gauff into Dubai semi-finals]]></title>
            <description><![CDATA[]]></description>
            <link>https://www.skysports.com/tennis/scores-schedule</link>
-           <pubDate>Wed, 18 Feb 2026 12:50:00 GMT</pubDate>
+           <pubDate>Thu, 19 Feb 2026 16:30:00 GMT</pubDate>
            <category>News Story</category>
-           <enclosure type="image/jpg" url="https://e1.365dm.com/26/02/1920x1080/skysports-coco-gauff-tennis_7167250.jpg?20260219112443" length="123456" />
+           <enclosure type="image/jpg" url="https://e1.365dm.com/26/01/1920x1080/skysports-carlos-alcaraz-tennis_7147210.jpg?20260127115035" length="123456" />
       </item><item>
            <title><![CDATA[Alcaraz, Sinner into Qatar Open quarter-finals]]></title>
            <description><![CDATA[Carlos Alcaraz reached the quarter-finals at the Qatar Open with a straight-sets victory over Valentin Royer.]]></description>
